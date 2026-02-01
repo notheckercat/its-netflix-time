@@ -3,12 +3,13 @@ from discord.ext import commands
 import requests
 from bs4 import BeautifulSoup
 import random
+import os  # Pentru variabile de mediu
 
-# === SETARE INTENTS ===
+# === INTENTS ===
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
-intents.message_content = True
+intents.message_content = True  # Necesare pentru comenzi cu argumente text
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # === COMANDA PING ===
@@ -27,21 +28,21 @@ async def strange(ctx):
 async def addnews(ctx, tweet_url: str):
     """
     Preia text + imagine dintr-un tweet public și postează în canal.
-    Notă: funcționează pentru tweet-uri simple vizibile în HTML (nu API)
+    Funcționează pentru tweet-uri vizibile în HTML (nu API).
     """
     try:
         r = requests.get(tweet_url)
         soup = BeautifulSoup(r.text, "html.parser")
 
         # Extrage textul
-        tweet_text = soup.find("meta", {"property": "og:description"})
-        tweet_text = tweet_text["content"] if tweet_text else "No text found."
+        tweet_text_meta = soup.find("meta", {"property": "og:description"})
+        tweet_text = tweet_text_meta["content"] if tweet_text_meta else "No text found."
 
         # Extrage imaginea
-        tweet_img = soup.find("meta", {"property": "og:image"})
-        tweet_img = tweet_img["content"] if tweet_img else None
+        tweet_img_meta = soup.find("meta", {"property": "og:image"})
+        tweet_img = tweet_img_meta["content"] if tweet_img_meta else None
 
-        # Construiește embed
+        # Creează embed
         embed = discord.Embed(description=tweet_text, color=0xe50914)
         if tweet_img:
             embed.set_image(url=tweet_img)
@@ -64,6 +65,7 @@ async def netflixtime(ctx):
         "BoJack Horseman (Animation / Comedy / Drama)"
     ]
     choice = random.choice(recommendations)
+    # Mesaj doar pentru utilizator
     await ctx.author.send(f"🎬 Netflix Recommendation for you: **{choice}**")
 
 # === ON READY ===
@@ -71,5 +73,9 @@ async def netflixtime(ctx):
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
-# === RUN BOT ===
-bot.run("YOUR_DISCORD_TOKEN")
+# === RUN BOT cu variabilă de mediu ===
+TOKEN = os.environ.get("DISCORD_TOKEN")
+if not TOKEN:
+    print("❌ Error: DISCORD_TOKEN environment variable not set.")
+else:
+    bot.run(TOKEN)
