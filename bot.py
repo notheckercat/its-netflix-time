@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord.ui import Button, View
-from openai import OpenAI
 import json
 import os
 import random
@@ -13,8 +12,6 @@ intents.messages = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-ai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 CONFIG_FILE = "config.json"
 CONFIG_ADMIN_ID = 1345769207588978708
@@ -104,7 +101,7 @@ async def netflixtime(ctx):
     await ctx.author.send(f"🎬 Netflix Recommendation: **{pick}**")
 
 @bot.command(name="fact")
-async def fact(ctx, *, question: str = None):
+async def fact(ctx):
     user_id = ctx.author.id
     now = time.time()
 
@@ -117,38 +114,36 @@ async def fact(ctx, *, question: str = None):
         fact_usage[user_id]["count"] = 0
         fact_usage[user_id]["time"] = now
 
-    if fact_usage[user_id]["count"] >= 3:
+    if fact_usage[user_id]["count"] >= 2:
         await ctx.send("I am too bored to say again a fact to you! Try again in 30 minutes.")
         return
 
-    if not question:
-        await ctx.send("Ask me something! Example: `!fact how rich is mr beast`")
-        return
+    facts = [
+        "Netflix was originally a DVD rental service.",
+        "Stranger Things was rejected over 15 times.",
+        "Honey never expires.",
+        "Octopuses have three hearts.",
+        "Bananas are berries.",
+        "Sharks existed before trees.",
+        "Venus day is longer than its year.",
+        "Wombat poop is cube-shaped.",
+        "Humans blink 20,000 times per day.",
+        "Your brain uses 20% of oxygen.",
+        "Butterflies remember being caterpillars.",
+        "There are more stars than sand grains.",
+        "Tardigrades survive space.",
+        "Hot water can freeze faster than cold.",
+        "Scotland has 421 words for snow.",
+        "Coca-Cola would be green without dye.",
+        "The Eiffel Tower grows in summer.",
+        "Netflix releases thousands of hours yearly.",
+        "The human body glows faintly.",
+        "There are more chess games than atoms."
+    ]
 
     fact_usage[user_id]["count"] += 1
 
-    try:
-        response = ai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a smart assistant that gives short, clear factual answers."
-                },
-                {
-                    "role": "user",
-                    "content": question
-                }
-            ],
-            max_tokens=150,
-            temperature=0.6
-        )
-
-        answer = response.choices[0].message.content
-        await ctx.send(f"🧠 **AI FACT RESPONSE:**\n{answer}")
-
-    except:
-        await ctx.send("❌ AI service error. Try again later.")
+    await ctx.send(f"🧠 Did you know?\n**{random.choice(facts)}**")
 
 @bot.event
 async def on_ready():
