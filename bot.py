@@ -101,7 +101,7 @@ async def netflixtime(ctx):
     await ctx.author.send(f"🎬 Netflix Recommendation: **{pick}**")
 
 @bot.command(name="fact")
-async def fact(ctx):
+async def fact(ctx, *, question: str = None):
     user_id = ctx.author.id
     now = time.time()
 
@@ -114,36 +114,74 @@ async def fact(ctx):
         fact_usage[user_id]["count"] = 0
         fact_usage[user_id]["time"] = now
 
-    if fact_usage[user_id]["count"] >= 2:
+    if fact_usage[user_id]["count"] >= 3:
         await ctx.send("I am too bored to say again a fact to you! Try again in 30 minutes.")
         return
 
-    facts = [
-        "Netflix was originally a DVD rental service.",
-        "Stranger Things was rejected over 15 times.",
-        "Honey never expires.",
-        "Octopuses have three hearts.",
-        "Bananas are berries.",
-        "Sharks existed before trees.",
-        "Venus day is longer than its year.",
-        "Wombat poop is cube-shaped.",
-        "Humans blink 20,000 times per day.",
-        "Your brain uses 20% of oxygen.",
-        "Butterflies remember being caterpillars.",
-        "There are more stars than sand grains.",
-        "Tardigrades survive space.",
-        "Hot water can freeze faster than cold.",
-        "Scotland has 421 words for snow.",
-        "Coca-Cola would be green without dye.",
-        "The Eiffel Tower grows in summer.",
-        "Netflix releases thousands of hours yearly.",
-        "The human body glows faintly.",
-        "There are more chess games than atoms."
-    ]
-
     fact_usage[user_id]["count"] += 1
 
-    await ctx.send(f"🧠 Did you know?\n**{random.choice(facts)}**")
+    if not question:
+        await ctx.send("Ask me something! Example: `!fact how rich is mr beast`")
+        return
+
+    q = question.lower()
+
+    knowledge = {
+        "mr beast": [
+            "MrBeast's estimated net worth is over $500 million and growing fast.",
+            "MrBeast reinvests most of his money into videos.",
+            "MrBeast makes money from YouTube, sponsors and Feastables."
+        ],
+        "netflix": [
+            "Netflix has over 260 million subscribers worldwide.",
+            "Netflix started as a DVD rental service.",
+            "Netflix spends billions yearly on original content."
+        ],
+        "space": [
+            "There are more stars than grains of sand on Earth.",
+            "Space is completely silent.",
+            "Venus has longer days than years."
+        ],
+        "earth": [
+            "70% of Earth is covered by water.",
+            "Earth is 4.5 billion years old.",
+            "Earth is the only known life planet."
+        ],
+        "human": [
+            "Your brain uses 20% of your body's energy.",
+            "Humans blink about 20,000 times per day.",
+            "Your body replaces cells every few years."
+        ],
+        "money": [
+            "Most money today exists digitally.",
+            "Only 8% of money is physical cash.",
+            "Coins are over 2500 years old."
+        ],
+        "technology": [
+            "Phones are stronger than moon landing computers.",
+            "AI is used in medicine and cars.",
+            "The first computers filled rooms."
+        ]
+    }
+
+    response = None
+
+    for key in knowledge:
+        if key in q:
+            response = random.choice(knowledge[key])
+            break
+
+    if not response:
+        generic_ai = [
+            "Interesting question! Experts are still researching this topic.",
+            "There is no exact answer, but data suggests rapid evolution.",
+            "This topic depends on many factors.",
+            "Scientists continue to study this subject.",
+            "This is a complex and fascinating subject."
+        ]
+        response = random.choice(generic_ai)
+
+    await ctx.send(f"🧠 **AI FACT RESPONSE:**\n{response}")
 
 @bot.event
 async def on_ready():
