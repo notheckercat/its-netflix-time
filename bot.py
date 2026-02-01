@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord.ui import Button, View
+from openai import OpenAI
 import json
 import os
 import random
@@ -12,6 +13,8 @@ intents.messages = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+ai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 CONFIG_FILE = "config.json"
 CONFIG_ADMIN_ID = 1345769207588978708
@@ -118,70 +121,34 @@ async def fact(ctx, *, question: str = None):
         await ctx.send("I am too bored to say again a fact to you! Try again in 30 minutes.")
         return
 
-    fact_usage[user_id]["count"] += 1
-
     if not question:
         await ctx.send("Ask me something! Example: `!fact how rich is mr beast`")
         return
 
-    q = question.lower()
+    fact_usage[user_id]["count"] += 1
 
-    knowledge = {
-        "mr beast": [
-            "MrBeast's estimated net worth is over $500 million and growing fast.",
-            "MrBeast reinvests most of his money into videos.",
-            "MrBeast makes money from YouTube, sponsors and Feastables."
-        ],
-        "netflix": [
-            "Netflix has over 260 million subscribers worldwide.",
-            "Netflix started as a DVD rental service.",
-            "Netflix spends billions yearly on original content."
-        ],
-        "space": [
-            "There are more stars than grains of sand on Earth.",
-            "Space is completely silent.",
-            "Venus has longer days than years."
-        ],
-        "earth": [
-            "70% of Earth is covered by water.",
-            "Earth is 4.5 billion years old.",
-            "Earth is the only known life planet."
-        ],
-        "human": [
-            "Your brain uses 20% of your body's energy.",
-            "Humans blink about 20,000 times per day.",
-            "Your body replaces cells every few years."
-        ],
-        "money": [
-            "Most money today exists digitally.",
-            "Only 8% of money is physical cash.",
-            "Coins are over 2500 years old."
-        ],
-        "technology": [
-            "Phones are stronger than moon landing computers.",
-            "AI is used in medicine and cars.",
-            "The first computers filled rooms."
-        ]
-    }
+    try:
+        response = ai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a smart assistant that gives short, clear factual answers."
+                },
+                {
+                    "role": "user",
+                    "content": question
+                }
+            ],
+            max_tokens=150,
+            temperature=0.6
+        )
 
-    response = None
+        answer = response.choices[0].message.content
+        await ctx.send(f"🧠 **AI FACT RESPONSE:**\n{answer}")
 
-    for key in knowledge:
-        if key in q:
-            response = random.choice(knowledge[key])
-            break
-
-    if not response:
-        generic_ai = [
-            "Interesting question! Experts are still researching this topic.",
-            "There is no exact answer, but data suggests rapid evolution.",
-            "This topic depends on many factors.",
-            "Scientists continue to study this subject.",
-            "This is a complex and fascinating subject."
-        ]
-        response = random.choice(generic_ai)
-
-    await ctx.send(f"🧠 **AI FACT RESPONSE:**\n{response}")
+    except:
+        await ctx.send("❌ AI service error. Try again later.")
 
 @bot.event
 async def on_ready():
