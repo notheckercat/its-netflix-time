@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord.ui import Button, View
 import json
 import os
+import random  # <--- asta trebuie pentru !netflixtime
 
 # === INTENTS ===
 intents = discord.Intents.default()
@@ -28,7 +29,6 @@ def save_config(data):
 # === COMANDA CONFIG ===
 @bot.command(name="config")
 async def config(ctx, role: discord.Role):
-    """Setează rolul care poate folosi !addnews (doar adminul setat)"""
     if ctx.author.id != CONFIG_ADMIN_ID:
         await ctx.message.delete()
         return
@@ -40,39 +40,32 @@ async def config(ctx, role: discord.Role):
 # === COMANDA ADDNEWS ===
 @bot.command(name="addnews")
 async def addnews(ctx, tweet_url: str):
-    """Trimite embed cu username + button, doar pentru rolurile permise"""
     config = load_config()
     guild_id = str(ctx.guild.id)
     allowed_role_id = config.get(guild_id)
 
-    # Verifică dacă userul are rolul permis
     if allowed_role_id:
         allowed_role = ctx.guild.get_role(allowed_role_id)
         if allowed_role not in ctx.author.roles:
             await ctx.message.delete()
             return
     else:
-        # Dacă nu s-a configurat rolul → nimeni nu poate folosi comanda
         await ctx.message.delete()
         return
 
-    # Șterge mesajul original
     await ctx.message.delete()
 
-    # Extrage username simplu din link
     try:
         username = tweet_url.split("/")[3]
     except IndexError:
         username = "Unknown"
 
-    # Embed
     embed = discord.Embed(
         title=f"NEW {username} POST!",
         description="Check it here!",
         color=0xe50914
     )
 
-    # Button
     button = Button(label="Go to Tweet", url=tweet_url)
     view = View()
     view.add_item(button)
