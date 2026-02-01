@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 
-bot = commands.Bot(command_prefix="/", intents=discord.Intents.default())
+bot = commands.Bot(command_prefix="!", intents=discord.Intents.default())
 
 if os.path.exists("data.json"):
     with open("data.json") as f:
@@ -63,4 +63,5 @@ async def on_ready():
     check_twitter.start()
 
 bot.run(os.environ["DISCORD_TOKEN"])
+
 
