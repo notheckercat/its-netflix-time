@@ -12,6 +12,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 CONFIG_FILE = "config.json"
+CONFIG_ADMIN_ID = 1345769207588978708  # Doar acest user poate folosi !config
 
 # === Helper pentru roluri permise ===
 def load_config():
@@ -26,9 +27,11 @@ def save_config(data):
 
 # === COMANDA CONFIG ===
 @bot.command(name="config")
-@commands.has_permissions(administrator=True)
 async def config(ctx, role: discord.Role):
-    """Setează rolul care poate folosi !addnews"""
+    """Setează rolul care poate folosi !addnews (doar adminul setat)"""
+    if ctx.author.id != CONFIG_ADMIN_ID:
+        await ctx.message.delete()
+        return
     config = load_config()
     config[str(ctx.guild.id)] = role.id
     save_config(config)
@@ -37,7 +40,7 @@ async def config(ctx, role: discord.Role):
 # === COMANDA ADDNEWS ===
 @bot.command(name="addnews")
 async def addnews(ctx, tweet_url: str):
-    """Trimite embed cu link tweet, doar pentru rolurile permise"""
+    """Trimite embed cu username + button, doar pentru rolurile permise"""
     config = load_config()
     guild_id = str(ctx.guild.id)
     allowed_role_id = config.get(guild_id)
@@ -46,18 +49,17 @@ async def addnews(ctx, tweet_url: str):
     if allowed_role_id:
         allowed_role = ctx.guild.get_role(allowed_role_id)
         if allowed_role not in ctx.author.roles:
-            # Șterge mesajul și nu face nimic
             await ctx.message.delete()
             return
-    # Dacă nu s-a configurat rolul → nimeni nu poate folosi comanda
-    elif not allowed_role_id:
+    else:
+        # Dacă nu s-a configurat rolul → nimeni nu poate folosi comanda
         await ctx.message.delete()
         return
 
     # Șterge mesajul original
     await ctx.message.delete()
 
-    # Extrage username din link (simplu parsing)
+    # Extrage username simplu din link
     try:
         username = tweet_url.split("/")[3]
     except IndexError:
