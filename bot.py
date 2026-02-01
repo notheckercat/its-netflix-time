@@ -4,12 +4,13 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import os
+import time
 
 # === SETARE INTENTS CORECT ===
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
-intents.message_content = True  # necesar pentru a primi argumente text
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # === INCARCA SAU CREAZA BAZA DE DATE ===
@@ -26,7 +27,6 @@ async def add_channel(ctx, channel: str, twitter_account: str):
     if channel.startswith("<#") and channel.endswith(">"):
         channel_id = int(channel[2:-1])
     else:
-        # caută după nume
         found = discord.utils.get(ctx.guild.text_channels, name=channel.replace("#", ""))
         if not found:
             await ctx.send("❌ Canal invalid!")
@@ -42,7 +42,6 @@ async def add_channel(ctx, channel: str, twitter_account: str):
     if guild_id not in db:
         db[guild_id] = []
 
-    # Adăugăm contul în listă
     db[guild_id].append({
         "channel": channel_obj.id,
         "account": twitter_account,
@@ -53,6 +52,21 @@ async def add_channel(ctx, channel: str, twitter_account: str):
         json.dump(db, f, indent=4)
 
     await ctx.send(f"✅ Added {twitter_account} to post in {channel_obj.mention}!")
+
+# === COMANDA PING ===
+@bot.command(name="ping")
+async def ping(ctx):
+    start = time.time()
+    msg = await ctx.send("Pinging...")
+    end = time.time()
+    ping_ms = round((end - start) * 1000)
+    await msg.edit(content=f"!pong 🏓 | {ping_ms}ms")
+
+# === COMANDA STRANGE ===
+@bot.command(name="strange")
+async def strange(ctx):
+    gif_url = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDI3MWQ2N2sxdzNiNXltbm1rNGN4eHFjNm95ZzBkZ2k1M2hxbGVrbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/T9JPznkGDAxYC8m7yC/giphy.gif"
+    await ctx.send(gif_url)
 
 # === TASK PENTRU VERIFICAREA X/TWITTER LA FIECARE 5 MINUTE ===
 @tasks.loop(minutes=5)
@@ -76,7 +90,6 @@ async def check_twitter():
                             await channel.send(f"📰 New post from {url}:\n{tweet_text}")
                             info["last_post"] = tweet_text
 
-                            # salvăm baza de date
                             with open("data.json", "w") as f:
                                 json.dump(db, f, indent=4)
             except Exception as e:
@@ -90,6 +103,3 @@ async def on_ready():
 
 # === RULEAZA BOTUL ===
 bot.run(os.environ["DISCORD_TOKEN"])
-
-
-
