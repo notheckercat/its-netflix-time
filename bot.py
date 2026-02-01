@@ -1,16 +1,81 @@
 import discord
 from discord.ext import commands
-import requests
-from bs4 import BeautifulSoup
-import random
-import os  # Pentru variabile de mediu
+from discord.ui import Button, View
+import json
+import os
 
 # === INTENTS ===
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
-intents.message_content = True  # Necesare pentru comenzi cu argumente text
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+CONFIG_FILE = "config.json"
+
+# === Helper pentru roluri permise ===
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_config(data):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(data, f)
+
+# === COMANDA CONFIG ===
+@bot.command(name="config")
+@commands.has_permissions(administrator=True)
+async def config(ctx, role: discord.Role):
+    """Setează rolul care poate folosi !addnews"""
+    config = load_config()
+    config[str(ctx.guild.id)] = role.id
+    save_config(config)
+    await ctx.send(f"✅ {role.name} role can now use !addnews.")
+
+# === COMANDA ADDNEWS ===
+@bot.command(name="addnews")
+async def addnews(ctx, tweet_url: str):
+    """Trimite embed cu link tweet, doar pentru rolurile permise"""
+    config = load_config()
+    guild_id = str(ctx.guild.id)
+    allowed_role_id = config.get(guild_id)
+
+    # Verifică dacă userul are rolul permis
+    if allowed_role_id:
+        allowed_role = ctx.guild.get_role(allowed_role_id)
+        if allowed_role not in ctx.author.roles:
+            # Șterge mesajul și nu face nimic
+            await ctx.message.delete()
+            return
+    # Dacă nu s-a configurat rolul → nimeni nu poate folosi comanda
+    elif not allowed_role_id:
+        await ctx.message.delete()
+        return
+
+    # Șterge mesajul original
+    await ctx.message.delete()
+
+    # Extrage username din link (simplu parsing)
+    try:
+        username = tweet_url.split("/")[3]
+    except IndexError:
+        username = "Unknown"
+
+    # Embed
+    embed = discord.Embed(
+        title=f"NEW {username} POST!",
+        description="Check it here!",
+        color=0xe50914
+    )
+
+    # Button
+    button = Button(label="Go to Tweet", url=tweet_url)
+    view = View()
+    view.add_item(button)
+
+    await ctx.send(embed=embed, view=view)
 
 # === COMANDA PING ===
 @bot.command(name="ping")
@@ -22,45 +87,6 @@ async def ping(ctx):
 async def strange(ctx):
     gif_url = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDI3MWQ2N2sxdzNiNXltbm1rNGN4eHFjNm95ZzBkZ2k1M2hxbGVrbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/T9JPznkGDAxYC8m7yC/giphy.gif"
     await ctx.send(gif_url)
-
-# === COMANDA ADDNEWS ===
-@bot.command(name="addnews")
-async def addnews(ctx, tweet_url: str):
-    """
-    Preia text + imagine dintr-un tweet public și postează în canal.
-    Versiune robustă fără API: fallback dacă og:description nu există.
-    """
-    try:
-        r = requests.get(tweet_url)
-        soup = BeautifulSoup(r.text, "html.parser")
-
-        # 1️⃣ Încearcă meta og:description
-        tweet_text_meta = soup.find("meta", {"property": "og:description"})
-        tweet_text = tweet_text_meta["content"] if tweet_text_meta else None
-
-        # 2️⃣ Dacă nu există, încearcă meta name="description"
-        if not tweet_text:
-            tweet_text_meta_alt = soup.find("meta", {"name": "description"})
-            tweet_text = tweet_text_meta_alt["content"] if tweet_text_meta_alt else None
-
-        # 3️⃣ Dacă tot nu există → fallback
-        if not tweet_text:
-            tweet_text = "⚠️ Cannot fetch full tweet content, click the link to view."
-
-        # Imagine
-        tweet_img_meta = soup.find("meta", {"property": "og:image"})
-        tweet_img = tweet_img_meta["content"] if tweet_img_meta else None
-
-        # Creează embed
-        embed = discord.Embed(description=tweet_text, color=0xe50914)
-        if tweet_img:
-            embed.set_image(url=tweet_img)
-        embed.set_footer(text=f"Tweet: {tweet_url}")
-
-        await ctx.send(embed=embed)
-
-    except Exception as e:
-        await ctx.send(f"❌ Could not fetch tweet: {e}")
 
 # === COMANDA NETFLIXTIME ===
 @bot.command(name="netflixtime")
@@ -75,7 +101,6 @@ async def netflixtime(ctx):
         "BoJack Horseman (Animation / Comedy / Drama)"
     ]
     choice = random.choice(recommendations)
-    # Mesaj doar pentru utilizator
     await ctx.author.send(f"🎬 Netflix Recommendation for you: **{choice}**")
 
 # === ON READY ===
