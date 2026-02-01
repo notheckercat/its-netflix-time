@@ -28,17 +28,26 @@ async def strange(ctx):
 async def addnews(ctx, tweet_url: str):
     """
     Preia text + imagine dintr-un tweet public și postează în canal.
-    Funcționează pentru tweet-uri vizibile în HTML (nu API).
+    Versiune robustă fără API: fallback dacă og:description nu există.
     """
     try:
         r = requests.get(tweet_url)
         soup = BeautifulSoup(r.text, "html.parser")
 
-        # Extrage textul
+        # 1️⃣ Încearcă meta og:description
         tweet_text_meta = soup.find("meta", {"property": "og:description"})
-        tweet_text = tweet_text_meta["content"] if tweet_text_meta else "No text found."
+        tweet_text = tweet_text_meta["content"] if tweet_text_meta else None
 
-        # Extrage imaginea
+        # 2️⃣ Dacă nu există, încearcă meta name="description"
+        if not tweet_text:
+            tweet_text_meta_alt = soup.find("meta", {"name": "description"})
+            tweet_text = tweet_text_meta_alt["content"] if tweet_text_meta_alt else None
+
+        # 3️⃣ Dacă tot nu există → fallback
+        if not tweet_text:
+            tweet_text = "⚠️ Cannot fetch full tweet content, click the link to view."
+
+        # Imagine
         tweet_img_meta = soup.find("meta", {"property": "og:image"})
         tweet_img = tweet_img_meta["content"] if tweet_img_meta else None
 
@@ -49,6 +58,7 @@ async def addnews(ctx, tweet_url: str):
         embed.set_footer(text=f"Tweet: {tweet_url}")
 
         await ctx.send(embed=embed)
+
     except Exception as e:
         await ctx.send(f"❌ Could not fetch tweet: {e}")
 
